@@ -1,0 +1,951 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>くり下がりニンジャ20</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@700;800;900&display=swap" rel="stylesheet">
+    
+    <style>
+        body {
+            font-family: 'M PLUS Rounded 1c', sans-serif;
+            touch-action: manipulation;
+            user-select: none;
+            -webkit-user-select: none;
+            background-color: #0b0f19;
+        }
+
+        /* Button Press Feeling */
+        .btn-circle {
+            transition: transform 0.1s ease, box-shadow 0.1s ease, background-color 0.15s;
+        }
+        .btn-circle:active {
+            transform: translateY(4px) scale(0.95);
+            box-shadow: 0 1px 0 #b45309 !important;
+        }
+
+        /* Runner Chase Animations */
+        @keyframes runnerBob {
+            0%, 100% { transform: translateY(0px) rotate(0deg); }
+            25% { transform: translateY(-5px) rotate(-3deg); }
+            50% { transform: translateY(0px) rotate(0deg); }
+            75% { transform: translateY(-6px) rotate(3deg); }
+        }
+
+        @keyframes kaijuBob {
+            0%, 100% { transform: translateY(0px) rotate(0deg); }
+            30% { transform: translateY(-7px) rotate(4deg); }
+            60% { transform: translateY(0px) rotate(-2deg); }
+            80% { transform: translateY(-4px) rotate(2deg); }
+        }
+
+        @keyframes groundMove {
+            0% { background-position: 0 0; }
+            100% { background-position: -60px 0; }
+        }
+
+        @keyframes dustAnim {
+            0% { transform: scale(0.3) translateX(0); opacity: 0.8; }
+            100% { transform: scale(1.2) translateX(-20px); opacity: 0; }
+        }
+
+        @keyframes sweatAnim {
+            0% { transform: translateY(0) scale(0.8); opacity: 1; }
+            100% { transform: translateY(12px) scale(1.2); opacity: 0; }
+        }
+
+        /* Sword Slash Visual FX Animation */
+        @keyframes slashLineAnim {
+            0% {
+                width: 0%;
+                opacity: 0;
+                transform: rotate(-15deg) translateY(-50%);
+            }
+            30% {
+                opacity: 1;
+            }
+            100% {
+                width: 130%;
+                opacity: 0;
+                transform: rotate(-15deg) translateY(-50%) translateX(20px);
+            }
+        }
+
+        @keyframes shakeenTextPop {
+            0% { transform: scale(0.3) rotate(-10deg); opacity: 0; }
+            50% { transform: scale(1.2) rotate(5deg); opacity: 1; }
+            100% { transform: scale(1) rotate(0deg); opacity: 0; }
+        }
+
+        .animate-ninja { animation: runnerBob 0.35s infinite linear; }
+        .animate-kaiju { animation: kaijuBob 0.4s infinite linear; }
+
+        .running-ground {
+            background-image: repeating-linear-gradient(
+                90deg,
+                #334155 0px,
+                #334155 20px,
+                #1e293b 20px,
+                #1e293b 40px
+            );
+            animation: groundMove 0.4s linear infinite;
+        }
+
+        .dust-cloud { animation: dustAnim 0.5s infinite linear; }
+        .sweat-drop { animation: sweatAnim 0.6s infinite linear; }
+
+        .slash-effect {
+            animation: slashLineAnim 0.35s cubic-bezier(0.1, 0.8, 0.3, 1) forwards;
+        }
+
+        .shakeen-pop {
+            animation: shakeenTextPop 0.45s ease-out forwards;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            20%, 60% { transform: translateX(-12px); }
+            40%, 80% { transform: translateX(12px); }
+        }
+        .animate-shake { animation: shake 0.4s ease-in-out; }
+
+        @keyframes pop {
+            0% { transform: scale(0.8); opacity: 0; }
+            70% { transform: scale(1.05); }
+            100% { transform: scale(1); opacity: 1; }
+        }
+        .animate-pop { animation: pop 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+    </style>
+</head>
+<body class="text-white min-h-screen flex items-center justify-center p-0 sm:p-3 relative overflow-hidden bg-slate-950">
+
+    <!-- Fireworks Canvas for Victory -->
+    <canvas id="fireworksCanvas" class="fixed inset-0 pointer-events-none z-50 w-full h-full"></canvas>
+
+    <!-- 0.5s Dino Cut-In Insert Overlay -->
+    <div id="dinoCutInOverlay" class="fixed inset-0 bg-slate-950/90 z-50 hidden flex flex-col items-center justify-center animate-pop pointer-events-none">
+        <div class="text-8xl sm:text-9xl animate-pulse select-none filter drop-shadow-[0_0_35px_rgba(34,197,94,0.6)]">
+            🦖
+        </div>
+        <div class="text-amber-400 font-black text-2xl mt-4 tracking-widest animate-bounce">
+            ガブッ！！
+        </div>
+    </div>
+
+    <!-- App Main Container -->
+    <div id="app" class="w-full max-w-md bg-slate-900 border-y sm:border-4 border-amber-500 sm:rounded-3xl p-4 sm:p-5 shadow-2xl relative z-10 flex flex-col justify-between min-h-screen sm:min-h-[660px]">
+        
+        <!-- Header -->
+        <header class="flex items-center justify-between pb-2 border-b border-slate-800">
+            <span class="bg-gradient-to-r from-amber-500 to-orange-500 text-slate-950 px-3 py-1 rounded-full text-xs font-black tracking-wider shadow flex items-center gap-1">
+                🥷 くり下がりニンジャ20
+            </span>
+            <button id="soundToggle" class="text-xs bg-slate-800 hover:bg-slate-700 text-amber-300 font-bold px-3 py-1 rounded-full border border-amber-500/50 transition flex items-center gap-1">
+                🔊 おと＆BGM：ON
+            </button>
+        </header>
+
+        <!-- SCREEN CONTAINER -->
+        <main id="screenContainer" class="flex-1 flex flex-col justify-between my-2">
+            
+            <!-- START SCREEN -->
+            <div id="startScreen" class="w-full text-center my-auto space-y-5 animate-pop">
+                <div class="text-6xl my-2 flex justify-center items-center gap-3">
+                    <span class="animate-bounce">🥷</span>
+                    <span class="text-3xl text-amber-400">⚔️</span>
+                    <span class="animate-pulse text-5xl">🦖</span>
+                </div>
+                <div class="bg-slate-800/90 p-4 rounded-2xl border border-slate-700 text-left space-y-2 text-xs sm:text-sm">
+                    <p class="text-amber-400 font-black text-base border-b border-slate-700 pb-1 flex items-center justify-between">
+                        <span>【修行のルール】</span>
+                        <span class="text-xs text-amber-300">⚔️ シャキーン！</span>
+                    </p>
+                    <ul class="list-disc list-inside space-y-1.5 text-slate-200">
+                        <li>出題はすべて<span class="text-amber-300 font-bold">繰り下がりの引き算</span>！</li>
+                        <li>正解の丸を押すと<span class="text-amber-300 font-bold">「シャキーン！」と切り裂いて</span>怪獣に急接近！</li>
+                        <li><span class="text-emerald-400 font-bold">丸の中の3つの数字</span>（ギリギリ並び）から正解を選ぼう！</li>
+                        <li><span class="text-amber-400 font-bold">20問連続正解</span>で怪獣をつかまえて花火が上がる！</li>
+                        <li><span class="text-rose-400 font-bold">1問でも間違えると逃げられて即ゲームオーバー</span>！</li>
+                    </ul>
+                </div>
+                <button id="startBtn" class="w-full py-4 text-2xl font-black bg-gradient-to-r from-amber-500 via-orange-500 to-amber-600 hover:from-amber-400 hover:to-orange-400 text-slate-950 rounded-2xl shadow-[0_6px_0_#92400e] active:translate-y-1.5 active:shadow-none border-2 border-amber-300 transition-all cursor-pointer">
+                    修行スタート！
+                </button>
+            </div>
+
+            <!-- GAME PLAY SCREEN -->
+            <div id="gameScreen" class="w-full hidden flex-1 flex flex-col justify-between space-y-3">
+                
+                <!-- Progress Header -->
+                <div class="space-y-1 pt-1">
+                    <div class="flex justify-between items-center text-xs sm:text-sm font-black text-slate-300">
+                        <span id="questionNumText" class="text-amber-400 text-base sm:text-lg">だい 1 / 20 もん</span>
+                        <span id="streakBadge" class="bg-slate-800 px-3 py-1 rounded-full text-xs text-amber-300 border border-amber-500/40">
+                            🔥 ノリノリ！
+                        </span>
+                    </div>
+                    <div class="w-full bg-slate-950 h-3 rounded-full p-0.5 border border-slate-800 overflow-hidden">
+                        <div id="progressBar" class="bg-gradient-to-r from-amber-500 to-emerald-400 h-full rounded-full transition-all duration-300 w-0"></div>
+                    </div>
+                </div>
+
+                <!-- 1. FULL-WIDTH QUESTION DISPLAY AREA (NO BOXED CARD FRAME) -->
+                <div id="fullWidthQuestionArea" class="w-full relative py-5 px-1 my-1 flex flex-col items-center justify-center border-y-2 border-amber-500/40 bg-gradient-to-r from-slate-950 via-slate-900 to-slate-950 overflow-hidden shadow-2xl">
+                    
+                    <div class="text-[11px] text-amber-400/90 tracking-widest font-bold mb-1">
+                        ⚔️ けいさんして きりさけ！ ⚔️
+                    </div>
+
+                    <!-- Giant Expression Text (Takes full width) -->
+                    <div id="mathQuestion" class="w-full text-center text-6xl sm:text-7xl font-black tracking-widest text-amber-300 drop-shadow-[0_4px_20px_rgba(245,158,11,0.6)]">
+                        14 - 6 =
+                    </div>
+
+                    <!-- Sword Slash Graphic FX Layer -->
+                    <div id="slashEffectOverlay" class="absolute inset-0 pointer-events-none hidden flex items-center justify-center overflow-hidden">
+                        <div class="slash-line absolute h-3 bg-gradient-to-r from-yellow-200 via-white to-amber-400 shadow-[0_0_25px_#f59e0b] rounded-full slash-effect top-1/2 left-[-15%]"></div>
+                        <div id="shakeenText" class="absolute text-4xl sm:text-5xl font-black text-amber-300 drop-shadow-[0_0_15px_#f59e0b] shakeen-pop">
+                            シャキーン！ ⚔️
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 2. MIDDLE SECTION: RUNNING CHASE ANIMATION -->
+                <div class="relative w-full h-32 sm:h-36 bg-slate-950 border-2 border-slate-700 rounded-2xl overflow-hidden shadow-inner flex flex-col justify-between p-2">
+                    
+                    <!-- Background Sky & Castle Silhouette -->
+                    <div class="absolute inset-0 opacity-20 pointer-events-none flex justify-between items-end px-4 pb-6">
+                        <span class="text-4xl">🏯</span>
+                        <span class="text-3xl">🌲</span>
+                        <span class="text-4xl">🌲</span>
+                    </div>
+
+                    <div class="text-[10px] text-amber-300/80 z-10 font-bold text-center tracking-wider">
+                        🏃‍♂️ ぜんりょく しゅぎょう ちゅう！ 💨
+                    </div>
+
+                    <!-- Character Track (Ninja on Left, Kaiju on Right) -->
+                    <div class="relative w-full h-20 flex items-end mb-1 z-10 overflow-hidden">
+                        
+                        <!-- Ninja (Chasing on Left) -->
+                        <div id="ninjaWrapper" class="absolute bottom-1 left-3 transition-all duration-500 flex items-end z-10">
+                            <div class="relative animate-ninja">
+                                <svg class="w-12 h-12 sm:w-14 sm:h-14 drop-shadow-[0_4px_6px_rgba(0,0,0,0.5)]" viewBox="0 0 100 100">
+                                    <path d="M 20 35 Q 5 30 0 45" stroke="#f59e0b" stroke-width="6" fill="none" stroke-linecap="round"/>
+                                    <circle cx="50" cy="50" r="35" fill="#1e293b" stroke="#f59e0b" stroke-width="4"/>
+                                    <ellipse cx="58" cy="42" rx="20" ry="12" fill="#fde047"/>
+                                    <circle cx="50" cy="42" r="3.5" fill="#0f172a"/>
+                                    <circle cx="64" cy="42" r="3.5" fill="#0f172a"/>
+                                    <line x1="20" y1="75" x2="5" y2="20" stroke="#94a3b8" stroke-width="5" stroke-linecap="round"/>
+                                </svg>
+                            </div>
+                            <div class="dust-cloud text-xs opacity-70 -ml-2 mb-1">☁️</div>
+                        </div>
+
+                        <!-- Kaiju (Fleeing on Right - Resized to fit frame perfectly) -->
+                        <div id="kaijuWrapper" class="absolute bottom-1 right-3 transition-all duration-500 flex items-end z-20">
+                            <div class="sweat-drop text-xs -mr-1 mb-8">💦</div>
+                            <!-- Speech bubble for "おいしかった" -->
+                            <div id="deliciousBubble" class="hidden absolute -top-9 -left-8 bg-amber-300 text-slate-950 font-black text-xs px-2.5 py-1 rounded-xl shadow-lg border-2 border-slate-900 whitespace-nowrap z-30 animate-pop">
+                                おいしかった 😋
+                            </div>
+                            <div id="kaijuEmojiContainer" class="relative animate-kaiju text-5xl sm:text-6xl leading-none drop-shadow-[0_4px_6px_rgba(0,0,0,0.5)] select-none flex items-center">
+                                <span id="kaijuMainEmoji">🦖</span>
+                                <span id="smirkEmoji" class="text-3xl sm:text-4xl -ml-2 hidden">💩</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Moving Road -->
+                    <div class="w-full h-3 rounded-full running-ground border-t border-slate-700"></div>
+                </div>
+
+                <!-- 3. BOTTOM SECTION: 3 CIRCULAR CHOICE BUTTONS IN A ROW -->
+                <div class="pt-1">
+                    <div class="text-center text-xs text-amber-300 font-bold mb-2">
+                        👇 こたえの まる を おして きりさけ！
+                    </div>
+                    <div class="flex justify-center items-center gap-3 sm:gap-5">
+                        <button class="choice-btn btn-circle w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-gradient-to-b from-amber-300 via-amber-400 to-amber-500 border-4 border-amber-200 text-slate-950 text-3xl sm:text-4xl font-black flex items-center justify-center shadow-[0_6px_0_#b45309] active:translate-y-1 cursor-pointer">
+                            7
+                        </button>
+                        <button class="choice-btn btn-circle w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-gradient-to-b from-amber-300 via-amber-400 to-amber-500 border-4 border-amber-200 text-slate-950 text-3xl sm:text-4xl font-black flex items-center justify-center shadow-[0_6px_0_#b45309] active:translate-y-1 cursor-pointer">
+                            8
+                        </button>
+                        <button class="choice-btn btn-circle w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-gradient-to-b from-amber-300 via-amber-400 to-amber-500 border-4 border-amber-200 text-slate-950 text-3xl sm:text-4xl font-black flex items-center justify-center shadow-[0_6px_0_#b45309] active:translate-y-1 cursor-pointer">
+                            9
+                        </button>
+                    </div>
+                </div>
+
+            </div>
+
+            <!-- RESULT / GAME OVER SCREEN -->
+            <div id="gameOverScreen" class="w-full text-center hidden my-auto space-y-5 animate-pop">
+                <div class="text-6xl my-2">🦖💨 🥷💦</div>
+                <h2 class="text-3xl font-black text-rose-500 drop-shadow">にげられた！</h2>
+                <div class="bg-slate-950 p-5 rounded-2xl border border-slate-800 text-center space-y-2">
+                    <p class="text-slate-400 text-xs">せいかいした かず</p>
+                    <p id="finalScore" class="text-4xl font-black text-amber-400">0 / 20 問</p>
+                    <p class="text-xs text-slate-400 pt-1">1つでも まちがえると 怪獣に にげられちゃうぞ！</p>
+                </div>
+                <button id="retryBtn" class="w-full py-4 text-2xl font-black bg-gradient-to-r from-rose-600 to-amber-600 hover:from-rose-500 hover:to-amber-500 text-white rounded-2xl shadow-[0_6px_0_#9f1239] active:translate-y-1 cursor-pointer">
+                    もう一度リベンジ！
+                </button>
+            </div>
+
+            <!-- VICTORY SCREEN -->
+            <div id="victoryScreen" class="w-full text-center hidden my-auto space-y-5 animate-pop">
+                <div class="text-7xl my-2 animate-bounce flex justify-center items-center gap-1">
+                    <span>🦖</span><span class="text-5xl">💩</span>🎆
+                </div>
+                <div class="space-y-1">
+                    <span class="bg-amber-400 text-slate-950 px-3 py-1 rounded-full text-xs font-black">✨ つかまえたぞ！ ✨</span>
+                    <h2 class="text-3xl sm:text-4xl font-black text-amber-300 drop-shadow-[0_4px_10px_rgba(251,191,36,0.6)]">
+                        20問 完全クリア！
+                    </h2>
+                    <div id="clearTimeDisplay" class="inline-block bg-slate-950/80 px-4 py-1.5 rounded-full text-sm sm:text-base font-bold text-emerald-400 border border-emerald-500/40 mt-1 shadow-md">
+                        ⏱️ クリアタイム：--秒
+                    </div>
+                </div>
+                <div class="bg-slate-950 p-5 rounded-2xl border-2 border-amber-400 space-y-2">
+                    <p class="text-emerald-400 font-bold text-lg">あっぱれ！くりさがりマスター！</p>
+                    <p class="text-xs text-slate-300">怪獣をつかまえて 忍者修行 免許皆伝だ！</p>
+                </div>
+                <button id="victoryRetryBtn" class="w-full py-4 text-2xl font-black bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-slate-950 rounded-2xl shadow-[0_6px_0_#047857] active:translate-y-1 cursor-pointer">
+                    もう一度 修行する！
+                </button>
+            </div>
+
+        </main>
+
+        <!-- Footer -->
+        <footer class="text-center text-[11px] text-slate-500 pt-2 border-t border-slate-800">
+            算数忍者式 繰り下がり引き算 特訓モード
+        </footer>
+    </div>
+
+    <script>
+        // Web Audio Synthesizer (Shakeen sound effect & Japanese BGM)
+        class SoundEngine {
+            constructor() {
+                this.ctx = null;
+                this.enabled = true;
+                this.bgmTimer = null;
+                this.bgmStep = 0;
+                this.isBgmPlaying = false;
+            }
+
+            init() {
+                if (!this.ctx) {
+                    const AudioContext = window.AudioContext || window.webkitAudioContext;
+                    this.ctx = new AudioContext();
+                }
+                if (this.ctx.state === 'suspended') {
+                    this.ctx.resume();
+                }
+            }
+
+            // "シャキーン！" Sword Slash Sound Effect
+            playShakeen() {
+                if (!this.enabled || !this.ctx) return;
+                this.init();
+                const now = this.ctx.currentTime;
+
+                // 1. Sharp High-pitched metallic whistle/slash sweep
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(3200, now);
+                osc.frequency.exponentialRampToValueAtTime(350, now + 0.16);
+
+                const filter = this.ctx.createBiquadFilter();
+                filter.type = 'bandpass';
+                filter.frequency.setValueAtTime(2400, now);
+                filter.frequency.exponentialRampToValueAtTime(500, now + 0.16);
+                filter.Q.value = 4;
+
+                gain.gain.setValueAtTime(0.45, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.18);
+
+                osc.connect(filter);
+                filter.connect(gain);
+                gain.connect(this.ctx.destination);
+
+                osc.start(now);
+                osc.stop(now + 0.18);
+
+                // 2. White noise slicing friction burst
+                const bufferSize = this.ctx.sampleRate * 0.12;
+                const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+                const data = buffer.getChannelData(0);
+                for (let i = 0; i < bufferSize; i++) {
+                    data[i] = Math.random() * 2 - 1;
+                }
+
+                const noise = this.ctx.createBufferSource();
+                noise.buffer = buffer;
+
+                const noiseFilter = this.ctx.createBiquadFilter();
+                noiseFilter.type = 'highpass';
+                noiseFilter.frequency.setValueAtTime(1200, now);
+
+                const noiseGain = this.ctx.createGain();
+                noiseGain.gain.setValueAtTime(0.35, now);
+                noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.12);
+
+                noise.connect(noiseFilter);
+                noiseFilter.connect(noiseGain);
+                noiseGain.connect(this.ctx.destination);
+
+                noise.start(now);
+            }
+
+            // "ガブリ！" Bite Cut-In Impact Sound Effect
+            playGaburi() {
+                if (!this.enabled || !this.ctx) return;
+                this.init();
+                const now = this.ctx.currentTime;
+
+                // Heavy sub-bass bite impact
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'triangle';
+                osc.frequency.setValueAtTime(320, now);
+                osc.frequency.exponentialRampToValueAtTime(35, now + 0.18);
+
+                gain.gain.setValueAtTime(0.65, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.2);
+
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start(now);
+                osc.stop(now + 0.2);
+
+                // Bite noise snapping crunch
+                const bufferSize = this.ctx.sampleRate * 0.1;
+                const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+                const data = buffer.getChannelData(0);
+                for (let i = 0; i < bufferSize; i++) {
+                    data[i] = Math.random() * 2 - 1;
+                }
+                const noise = this.ctx.createBufferSource();
+                noise.buffer = buffer;
+                const filter = this.ctx.createBiquadFilter();
+                filter.type = 'bandpass';
+                filter.frequency.setValueAtTime(1300, now);
+                filter.Q.value = 3;
+                const noiseGain = this.ctx.createGain();
+                noiseGain.gain.setValueAtTime(0.5, now);
+                noiseGain.gain.exponentialRampToValueAtTime(0.001, now + 0.1);
+
+                noise.connect(filter);
+                filter.connect(noiseGain);
+                noiseGain.connect(this.ctx.destination);
+                noise.start(now);
+            }
+
+            // Realistic "むしゃむしゃむしゃ" Wet Munching Sound Effect
+            playMushaMusha() {
+                if (!this.enabled || !this.ctx) return;
+                this.init();
+                const now = this.ctx.currentTime;
+                
+                // Realistic wet crunching & squishing bites
+                const biteTimes = [0, 0.18, 0.36, 0.54];
+                biteTimes.forEach((t, idx) => {
+                    const biteTime = now + t;
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'sawtooth';
+                    osc.frequency.setValueAtTime(160 + (idx % 2) * 30, biteTime);
+                    osc.frequency.exponentialRampToValueAtTime(45, biteTime + 0.1);
+
+                    const filter = this.ctx.createBiquadFilter();
+                    filter.type = 'lowpass';
+                    filter.frequency.setValueAtTime(800, biteTime);
+
+                    gain.gain.setValueAtTime(0.4, biteTime);
+                    gain.gain.exponentialRampToValueAtTime(0.001, biteTime + 0.11);
+
+                    osc.connect(filter);
+                    filter.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start(biteTime);
+                    osc.stop(biteTime + 0.11);
+
+                    const bufferSize = this.ctx.sampleRate * 0.08;
+                    const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+                    const nData = buffer.getChannelData(0);
+                    for (let i = 0; i < bufferSize; i++) {
+                        nData[i] = (Math.random() * 2 - 1) * Math.exp(-i / (bufferSize * 0.3));
+                    }
+                    const noise = this.ctx.createBufferSource();
+                    noise.buffer = buffer;
+                    const nFilter = this.ctx.createBiquadFilter();
+                    nFilter.type = 'bandpass';
+                    nFilter.frequency.setValueAtTime(1500 - idx * 100, biteTime);
+                    nFilter.Q.value = 2.5;
+
+                    const nGain = this.ctx.createGain();
+                    nGain.gain.setValueAtTime(0.35, biteTime);
+                    nGain.gain.exponentialRampToValueAtTime(0.001, biteTime + 0.08);
+
+                    noise.connect(nFilter);
+                    nFilter.connect(nGain);
+                    nGain.connect(this.ctx.destination);
+                    noise.start(biteTime);
+                });
+            }
+
+            playWrong() {
+                if (!this.enabled || !this.ctx) return;
+                this.init();
+                const now = this.ctx.currentTime;
+                
+                const osc = this.ctx.createOscillator();
+                const gain = this.ctx.createGain();
+                osc.type = 'sawtooth';
+                osc.frequency.setValueAtTime(170, now);
+                osc.frequency.linearRampToValueAtTime(60, now + 0.35);
+
+                gain.gain.setValueAtTime(0.25, now);
+                gain.gain.exponentialRampToValueAtTime(0.001, now + 0.35);
+
+                osc.connect(gain);
+                gain.connect(this.ctx.destination);
+                osc.start(now);
+                osc.stop(now + 0.35);
+            }
+
+            playFanfare() {
+                if (!this.enabled || !this.ctx) return;
+                this.init();
+                const now = this.ctx.currentTime;
+
+                const notes = [
+                    { f: 523.25, t: 0, d: 0.12 },    // C5
+                    { f: 659.25, t: 0.12, d: 0.12 }, // E5
+                    { f: 783.99, t: 0.24, d: 0.12 }, // G5
+                    { f: 1046.50, t: 0.36, d: 0.6 }  // C6
+                ];
+
+                notes.forEach(note => {
+                    const osc = this.ctx.createOscillator();
+                    const gain = this.ctx.createGain();
+                    osc.type = 'triangle';
+                    osc.frequency.setValueAtTime(note.f, now + note.t);
+
+                    gain.gain.setValueAtTime(0.25, now + note.t);
+                    gain.gain.exponentialRampToValueAtTime(0.001, now + note.t + note.d);
+
+                    osc.connect(gain);
+                    gain.connect(this.ctx.destination);
+                    osc.start(now + note.t);
+                    osc.stop(now + note.t + note.d);
+                });
+            }
+
+            // Ninja-themed continuous BGM loop (Insen pentatonic scale)
+            startBGM() {
+                if (this.isBgmPlaying) return;
+                this.init();
+                this.isBgmPlaying = true;
+                this.bgmStep = 0;
+
+                // Japanese Insen Pentatonic Frequencies (D4, Eb4, G4, A4, Bb4, D5)
+                const notes = [293.66, 311.13, 392.00, 440.00, 466.16, 587.33];
+                // 16-step melody pattern
+                const melodyPattern = [
+                    0, -1, 2, -1, 3, 2, 1, -1,
+                    0, 2, 3, 4, 3, 2, 1, 0
+                ];
+
+                this.bgmTimer = setInterval(() => {
+                    if (!this.enabled || !this.ctx || !this.isBgmPlaying) return;
+
+                    const now = this.ctx.currentTime;
+                    const step = this.bgmStep % 16;
+                    const noteIdx = melodyPattern[step];
+
+                    // Play shamisen-like synth note
+                    if (noteIdx !== -1) {
+                        const freq = notes[noteIdx];
+                        const osc = this.ctx.createOscillator();
+                        const gain = this.ctx.createGain();
+                        
+                        osc.type = 'square';
+                        osc.frequency.setValueAtTime(freq, now);
+
+                        gain.gain.setValueAtTime(0.04, now);
+                        gain.gain.exponentialRampToValueAtTime(0.0001, now + 0.15);
+
+                        osc.connect(gain);
+                        gain.connect(this.ctx.destination);
+                        osc.start(now);
+                        osc.stop(now + 0.15);
+                    }
+
+                    // Play subtle rhythmic beat on every 2nd & 4th step
+                    if (step % 4 === 0 || step % 4 === 2) {
+                        const drumOsc = this.ctx.createOscillator();
+                        const drumGain = this.ctx.createGain();
+                        drumOsc.type = 'sine';
+                        drumOsc.frequency.setValueAtTime(140, now);
+                        drumOsc.frequency.exponentialRampToValueAtTime(40, now + 0.08);
+
+                        drumGain.gain.setValueAtTime(0.06, now);
+                        drumGain.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+
+                        drumOsc.connect(drumGain);
+                        drumGain.connect(this.ctx.destination);
+                        drumOsc.start(now);
+                        drumOsc.stop(now + 0.08);
+                    }
+
+                    this.bgmStep++;
+                }, 160); // Speed (~120 BPM)
+            }
+
+            stopBGM() {
+                this.isBgmPlaying = false;
+                if (this.bgmTimer) {
+                    clearInterval(this.bgmTimer);
+                    this.bgmTimer = null;
+                }
+            }
+        }
+
+        const sound = new SoundEngine();
+
+        // Canvas Fireworks Animation Engine
+        class Fireworks {
+            constructor(canvas) {
+                this.canvas = canvas;
+                this.ctx = canvas.getContext('2d');
+                this.particles = [];
+                this.animationId = null;
+                this.resize();
+                window.addEventListener('resize', () => this.resize());
+            }
+
+            resize() {
+                this.canvas.width = window.innerWidth;
+                this.canvas.height = window.innerHeight;
+            }
+
+            launch(count = 6) {
+                for (let i = 0; i < count; i++) {
+                    setTimeout(() => {
+                        const x = Math.random() * this.canvas.width * 0.8 + this.canvas.width * 0.1;
+                        const y = Math.random() * this.canvas.height * 0.4 + this.canvas.height * 0.1;
+                        this.createExplosion(x, y);
+                    }, i * 280);
+                }
+                if (!this.animationId) {
+                    this.loop();
+                }
+            }
+
+            createExplosion(x, y) {
+                const colors = ['#f59e0b', '#ef4444', '#10b981', '#3b82f6', '#ec4899', '#facc15'];
+                const numParticles = 60;
+                for (let i = 0; i < numParticles; i++) {
+                    const angle = (Math.PI * 2 / numParticles) * i + Math.random() * 0.2;
+                    const speed = Math.random() * 6 + 2;
+                    this.particles.push({
+                        x: x,
+                        y: y,
+                        vx: Math.cos(angle) * speed,
+                        vy: Math.sin(angle) * speed,
+                        color: colors[Math.floor(Math.random() * colors.length)],
+                        alpha: 1,
+                        decay: Math.random() * 0.015 + 0.008,
+                        size: Math.random() * 4 + 2
+                    });
+                }
+            }
+
+            loop() {
+                this.ctx.fillStyle = 'rgba(11, 15, 25, 0.2)';
+                this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+
+                for (let i = this.particles.length - 1; i >= 0; i--) {
+                    const p = this.particles[i];
+                    p.x += p.vx;
+                    p.y += p.vy;
+                    p.vy += 0.05;
+                    p.alpha -= p.decay;
+
+                    if (p.alpha <= 0) {
+                        this.particles.splice(i, 1);
+                        continue;
+                    }
+
+                    this.ctx.save();
+                    this.ctx.globalAlpha = p.alpha;
+                    this.ctx.fillStyle = p.color;
+                    this.ctx.beginPath();
+                    this.ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                    this.ctx.fill();
+                    this.ctx.restore();
+                }
+
+                if (this.particles.length > 0) {
+                    this.animationId = requestAnimationFrame(() => this.loop());
+                } else {
+                    this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+                    this.animationId = null;
+                }
+            }
+
+            stop() {
+                this.particles = [];
+                if (this.animationId) {
+                    cancelAnimationFrame(this.animationId);
+                    this.animationId = null;
+                }
+                this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+            }
+        }
+
+        // Borrowing Subtraction Question Generator (10の位が1の2桁整数 - 1桁整数 = 1桁整数、繰り下がり必須)
+        function generateBorrowingSubtractionQuestion() {
+            let A, B, answer;
+            do {
+                const a = Math.floor(Math.random() * 8) + 1; // 1..8 (一の位)
+                A = 10 + a; // 11..18
+                // 繰り下がりのため、引く数Bは a より大きい1桁の整数（a+1 〜 9）
+                const minB = a + 1;
+                const maxB = 9;
+                B = Math.floor(Math.random() * (maxB - minB + 1)) + minB;
+                answer = A - B;
+            } while (answer < 1 || answer > 9); // 答えは1桁の整数
+
+            let choices = [];
+            if (answer === 1) {
+                choices = [1, 2, 3];
+            } else if (answer === 9) {
+                choices = [7, 8, 9];
+            } else {
+                choices = [answer - 1, answer, answer + 1];
+            }
+
+            choices.sort(() => Math.random() - 0.5);
+
+            return { A, B, answer, choices };
+        }
+
+        // Game State Variables
+        const TOTAL_QUESTIONS = 20;
+        let currentStreak = 0;
+        let currentQuestion = null;
+        let isProcessingAnswer = false;
+        let startTime = 0;
+
+        // DOM Element References
+        const startScreen = document.getElementById('startScreen');
+        const gameScreen = document.getElementById('gameScreen');
+        const gameOverScreen = document.getElementById('gameOverScreen');
+        const victoryScreen = document.getElementById('victoryScreen');
+
+        const startBtn = document.getElementById('startBtn');
+        const retryBtn = document.getElementById('retryBtn');
+        const victoryRetryBtn = document.getElementById('victoryRetryBtn');
+        const soundToggle = document.getElementById('soundToggle');
+
+        const mathQuestionEl = document.getElementById('mathQuestion');
+        const questionNumText = document.getElementById('questionNumText');
+        const progressBar = document.getElementById('progressBar');
+        const choiceBtns = document.querySelectorAll('.choice-btn');
+        const finalScoreEl = document.getElementById('finalScore');
+        const fullWidthQuestionArea = document.getElementById('fullWidthQuestionArea');
+        const slashEffectOverlay = document.getElementById('slashEffectOverlay');
+        const clearTimeDisplay = document.getElementById('clearTimeDisplay');
+
+        const ninjaWrapper = document.getElementById('ninjaWrapper');
+        const kaijuWrapper = document.getElementById('kaijuWrapper');
+
+        const fireworks = new Fireworks(document.getElementById('fireworksCanvas'));
+
+        // Sound Toggle Event
+        soundToggle.addEventListener('click', () => {
+            sound.enabled = !sound.enabled;
+            if (sound.enabled) {
+                sound.init();
+                sound.startBGM();
+                soundToggle.textContent = '🔊 おと＆BGM：ON';
+            } else {
+                sound.stopBGM();
+                soundToggle.textContent = '🔇 おと＆BGM：OFF';
+            }
+        });
+
+        function startGame() {
+            sound.init();
+            sound.startBGM();
+            fireworks.stop();
+            currentStreak = 0;
+            isProcessingAnswer = false;
+            startTime = Date.now();
+
+            // 忍者と恐竜の表示状態を初期状態にリセット
+            ninjaWrapper.style.opacity = '1';
+            ninjaWrapper.style.transform = 'scale(1)';
+            const smirkEmoji = document.getElementById('smirkEmoji');
+            if (smirkEmoji) smirkEmoji.classList.add('hidden');
+            const deliciousBubble = document.getElementById('deliciousBubble');
+            if (deliciousBubble) deliciousBubble.classList.add('hidden');
+            const dinoCutInOverlay = document.getElementById('dinoCutInOverlay');
+            if (dinoCutInOverlay) dinoCutInOverlay.classList.add('hidden');
+
+            startScreen.classList.add('hidden');
+            gameOverScreen.classList.add('hidden');
+            victoryScreen.classList.add('hidden');
+            gameScreen.classList.remove('hidden');
+
+            updateChasePositions();
+            loadNextQuestion();
+        }
+
+        function updateChasePositions() {
+            // 20問目(progress=1)で忍者右側先端と恐竜左側先端がぴったり触れ合うよう座標を微調整
+            const progress = currentStreak / TOTAL_QUESTIONS;
+            const ninjaOffset = 3 + progress * 34.5;
+            const kaijuOffset = 3 + progress * 34.5;
+            ninjaWrapper.style.left = `${ninjaOffset}%`;
+            kaijuWrapper.style.right = `${kaijuOffset}%`;
+        }
+
+        function loadNextQuestion() {
+            isProcessingAnswer = false;
+            currentQuestion = generateBorrowingSubtractionQuestion();
+
+            questionNumText.textContent = `だい ${currentStreak + 1} / ${TOTAL_QUESTIONS} もん`;
+            const progressPercent = (currentStreak / TOTAL_QUESTIONS) * 100;
+            progressBar.style.width = `${progressPercent}%`;
+
+            mathQuestionEl.textContent = `${currentQuestion.A} - ${currentQuestion.B} =`;
+
+            choiceBtns.forEach((btn, index) => {
+                btn.textContent = currentQuestion.choices[index];
+                btn.disabled = false;
+                btn.className = "choice-btn btn-circle w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-gradient-to-b from-amber-300 via-amber-400 to-amber-500 border-4 border-amber-200 text-slate-950 text-3xl sm:text-4xl font-black flex items-center justify-center shadow-[0_6px_0_#b45309] active:translate-y-1 cursor-pointer";
+            });
+        }
+
+        function triggerSlashEffect() {
+            slashEffectOverlay.classList.remove('hidden');
+            setTimeout(() => {
+                slashEffectOverlay.classList.add('hidden');
+            }, 400);
+        }
+
+        function handleChoiceClick(selectedVal, btnEl) {
+            if (isProcessingAnswer) return;
+            isProcessingAnswer = true;
+
+            const isCorrect = (selectedVal === currentQuestion.answer);
+
+            if (isCorrect) {
+                // Correct -> "シャキーン！" Sword Slash Sound & Visual Cut Animation
+                sound.playShakeen();
+                triggerSlashEffect();
+
+                btnEl.className = "choice-btn btn-circle w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-gradient-to-b from-emerald-400 to-emerald-600 border-4 border-emerald-200 text-white text-3xl sm:text-4xl font-black flex items-center justify-center shadow-[0_6px_0_#047857]";
+                currentStreak++;
+
+                updateChasePositions();
+
+                setTimeout(() => {
+                    if (currentStreak >= TOTAL_QUESTIONS) {
+                        triggerVictory();
+                    } else {
+                        loadNextQuestion();
+                    }
+                }, 400);
+
+            } else {
+                // Wrong Answer -> Immediate Game Over
+                sound.playWrong();
+                btnEl.className = "choice-btn btn-circle w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-gradient-to-b from-rose-500 to-rose-700 border-4 border-rose-200 text-white text-3xl sm:text-4xl font-black flex items-center justify-center shadow-[0_6px_0_#be123c]";
+                fullWidthQuestionArea.classList.add('animate-shake');
+
+                setTimeout(() => {
+                    fullWidthQuestionArea.classList.remove('animate-shake');
+                    triggerGameOver();
+                }, 550);
+            }
+        }
+
+        function triggerGameOver() {
+            sound.stopBGM();
+            gameScreen.classList.add('hidden');
+            gameOverScreen.classList.remove('hidden');
+            finalScoreEl.textContent = `${currentStreak} / ${TOTAL_QUESTIONS} 問`;
+        }
+
+        function triggerVictory() {
+            sound.stopBGM();
+
+            // 20問クリア時：中央で出会った後、0.5秒顔アップのインサートを表示
+            updateChasePositions();
+
+            // ガブリ効果音再生
+            sound.playGaburi();
+
+            const dinoCutInOverlay = document.getElementById('dinoCutInOverlay');
+            if (dinoCutInOverlay) dinoCutInOverlay.classList.remove('hidden');
+
+            setTimeout(() => {
+                // 0.5秒インサート終了後、画面が戻ると忍者がいなくなる
+                if (dinoCutInOverlay) dinoCutInOverlay.classList.add('hidden');
+
+                ninjaWrapper.style.opacity = '0';
+                ninjaWrapper.style.transform = 'scale(0)';
+
+                const smirkEmoji = document.getElementById('smirkEmoji');
+                if (smirkEmoji) smirkEmoji.classList.remove('hidden');
+
+                // リアリティのあるむしゃむしゃむしゃの効果音が流れ、「おいしかった」の吹き出しを表示
+                sound.playMushaMusha();
+
+                const deliciousBubble = document.getElementById('deliciousBubble');
+                if (deliciousBubble) deliciousBubble.classList.remove('hidden');
+
+                // 1.2秒後に全クリア画面へ移行
+                setTimeout(() => {
+                    gameScreen.classList.add('hidden');
+                    victoryScreen.classList.remove('hidden');
+                    sound.playFanfare();
+
+                    // Calculate clear time in seconds/minutes
+                    const elapsedTimeSec = Math.floor((Date.now() - startTime) / 1000);
+                    const minutes = Math.floor(elapsedTimeSec / 60);
+                    const seconds = elapsedTimeSec % 60;
+                    const timeStr = minutes > 0 ? `${minutes}分${seconds}秒` : `${seconds}秒`;
+                    if (clearTimeDisplay) {
+                        clearTimeDisplay.textContent = `⏱️ クリアタイム：${timeStr}`;
+                    }
+
+                    fireworks.launch(8);
+                }, 1200);
+
+            }, 500); // 0.5秒インサート
+        }
+
+        // Event Listeners
+        startBtn.addEventListener('click', startGame);
+        retryBtn.addEventListener('click', startGame);
+        victoryRetryBtn.addEventListener('click', startGame);
+
+        choiceBtns.forEach(btn => {
+            btn.addEventListener('click', () => {
+                const val = parseInt(btn.textContent, 10);
+                handleChoiceClick(val, btn);
+            });
+        });
+    </script>
+</body>
+</html>
